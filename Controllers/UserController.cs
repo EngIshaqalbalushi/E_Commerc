@@ -1,5 +1,4 @@
 ﻿using E_CommerceSystem.Models;
-using E_CommerceSystem.Models.DTOs;
 using E_CommerceSystem.Services;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using E_CommerceSystem.DTOs;
 
 namespace E_CommerceSystem.Controllers
 {
@@ -29,47 +29,73 @@ namespace E_CommerceSystem.Controllers
 
         // ✅ Register new user
         [AllowAnonymous]
-        [HttpPost("Register")]
-        public IActionResult Register(UserDTO inputUser)
+        [HttpPost("register")]
+        public IActionResult Register([FromBody] RegisterDTO dto)
         {
             try
             {
-                if (inputUser == null)
+                if (dto == null)
                     return BadRequest("User data is required.");
 
-                var user = _mapper.Map<User>(inputUser);
-                user.CreatedAt = DateTime.Now;
-
-                _userService.AddUser(user);
-
-                return Ok(_mapper.Map<UserDTO>(user));
+                _userService.Register(dto);
+                return Ok("User registered successfully");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"An error occurred while adding the user. {ex.Message}");
+                return StatusCode(500, $"An error occurred while registering the user. {ex.Message}");
             }
         }
 
-        // ✅ Login user → return JWT token
+        // ✅ Refresh token
         [AllowAnonymous]
-        [HttpGet("Login")]
-        public IActionResult Login(string email, string password)
+        [HttpPost("refresh-token")]
+        public IActionResult RefreshToken([FromBody] RefreshRequestDTO dto)
+        {
+            var user = _userService.GetUserByRefreshToken(dto.RefreshToken);
+            if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+                return Unauthorized("Invalid or expired refresh token");
+
+            // Generate a new JWT
+            var newJwt = GenerateJwtToken(user);
+
+            // Generate a new refresh token & save
+            var newRefresh = Guid.NewGuid().ToString();
+            _userService.SaveRefreshToken(user, newRefresh);
+
+            return Ok(new AuthResponseDTO
+            {
+                Token = newJwt,
+                RefreshToken = newRefresh,
+                Expiration = DateTime.UtcNow.AddMinutes(15)
+            });
+        }
+
+        // ✅ Login
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginDTO dto)
         {
             try
             {
-                var user = _userService.GetUSer(email, password);
+                var user = _userService.Login(dto);
                 if (user == null) return Unauthorized("Invalid email or password.");
 
-                string token = GenerateJwtToken(user.UID.ToString(), user.UName, user.Role);
-                return Ok(new { Token = token });
+                var token = GenerateJwtToken(user);
+
+                return Ok(new AuthResponseDTO
+                {
+                    Token = token,
+                    RefreshToken = user.RefreshToken!,
+                    Expiration = DateTime.UtcNow.AddMinutes(15)
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"An error occurred while login. {ex.Message}");
+                return StatusCode(500, $"An error occurred while logging in. {ex.Message}");
             }
         }
 
-        // ✅ Get user by ID (returns DTO, not entity)
+        // ✅ Get user by ID
         [HttpGet("GetUserById/{UserID}")]
         public IActionResult GetUserById(int UserID)
         {
@@ -87,22 +113,22 @@ namespace E_CommerceSystem.Controllers
             }
         }
 
-        // 🔑 Helper: generate JWT token
+        // 🔑 Helper: generate JWT token directly from User
         [NonAction]
-        public string GenerateJwtToken(string userId, string username, string role)
+        private string GenerateJwtToken(User user)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId),
-                new Claim(JwtRegisteredClaimNames.Name, username),
-                new Claim("role", role), // explicit role claim
+                new Claim(JwtRegisteredClaimNames.Sub, user.UID.ToString()),
+                new Claim(JwtRegisteredClaimNames.Name, user.UName),
+                new Claim("role", user.Role),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(

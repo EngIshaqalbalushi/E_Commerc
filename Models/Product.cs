@@ -36,6 +36,12 @@ namespace E_CommerceSystem.Models
         public virtual ICollection<OrderProducts> OrderProducts { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<Review> Reviews { get; set; }
+        public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
+
+
     }
 }

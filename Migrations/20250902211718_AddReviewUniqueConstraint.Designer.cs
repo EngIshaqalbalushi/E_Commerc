@@ -4,6 +4,7 @@ using E_CommerceSystem;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace E_CommerceSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250902211718_AddReviewUniqueConstraint")]
+    partial class AddReviewUniqueConstraint
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,12 +56,6 @@ namespace E_CommerceSystem.Migrations
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -122,12 +119,6 @@ namespace E_CommerceSystem.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
                     b.Property<int>("SID")
                         .HasColumnType("int");
 
@@ -167,19 +158,9 @@ namespace E_CommerceSystem.Migrations
                     b.Property<int>("UID")
                         .HasColumnType("int");
 
-                    b.Property<int>("productPID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("userUID")
-                        .HasColumnType("int");
-
                     b.HasKey("ReviewID");
 
                     b.HasIndex("PID");
-
-                    b.HasIndex("productPID");
-
-                    b.HasIndex("userUID");
 
                     b.HasIndex("UID", "PID")
                         .IsUnique();
@@ -308,33 +289,17 @@ namespace E_CommerceSystem.Migrations
 
             modelBuilder.Entity("E_CommerceSystem.Models.Review", b =>
                 {
-                    b.HasOne("E_CommerceSystem.Models.Product", "Product")
+                    b.HasOne("E_CommerceSystem.Models.Product", "product")
                         .WithMany("Reviews")
                         .HasForeignKey("PID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("E_CommerceSystem.Models.User", "User")
-                        .WithMany("Reviews")
-                        .HasForeignKey("UID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("E_CommerceSystem.Models.Product", "product")
-                        .WithMany()
-                        .HasForeignKey("productPID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("E_CommerceSystem.Models.User", "user")
-                        .WithMany()
-                        .HasForeignKey("userUID")
+                        .WithMany("Reviews")
+                        .HasForeignKey("UID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("User");
 
                     b.Navigation("product");
 

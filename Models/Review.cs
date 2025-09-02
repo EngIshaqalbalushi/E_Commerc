@@ -10,7 +10,7 @@ namespace E_CommerceSystem.Models
         public int ReviewID { get; set; }
 
         [Required]
-        [Range(1,5)]
+        [Range(1, 5)]
         public int Rating { get; set; }
 
         public string Comment { get; set; } = null;
@@ -28,5 +28,8 @@ namespace E_CommerceSystem.Models
 
         [JsonIgnore]
         public Product product { get; set; }
+
+        public User User { get; set; }   // if you want reviewer info
+        public Product Product { get; set; }
     }
 }

@@ -1,14 +1,24 @@
-﻿using E_CommerceSystem.Models;
+﻿using E_CommerceSystem.DTOs;
+using E_CommerceSystem.Models;
 
 namespace E_CommerceSystem.Services
 {
     public interface IUserService
     {
-        void AddUser(User user);
-        void DeleteUser(int uid);
+        // 🔑 Register a new user
+        void Register(RegisterDTO dto);
+
+        // 🔑 Login with DTO
+        User Login(LoginDTO dto);
+
+        // 🔑 CRUD
         IEnumerable<User> GetAllUsers();
-        User GetUSer(string email, string password);
         User GetUserById(int uid);
         void UpdateUser(User user);
+        void DeleteUser(int uid);
+
+        // 🔑 Refresh token support
+        User? GetUserByRefreshToken(string refreshToken);
+        void SaveRefreshToken(User user, string newToken);
     }
 }

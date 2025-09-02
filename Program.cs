@@ -1,5 +1,6 @@
 
 using E_CommerceSystem.Mappings;
+using E_CommerceSystem.Middleware;
 using E_CommerceSystem.Repositories;
 using E_CommerceSystem.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -57,6 +58,22 @@ namespace E_CommerceSystem
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                  options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // Invoice Service
+            builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+
+            builder.Services.AddScoped<ReportRepo>();
+            builder.Services.AddScoped<ReportService>();
+
+
+            // add serilog 
+            Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("Logs/app-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+            builder.Host.UseSerilog(); // replace default logger
+
 
 
 
@@ -129,6 +146,7 @@ namespace E_CommerceSystem
             }
 
             app.UseHttpsRedirection();
+            app.UseErrorHandling();
 
             app.UseAuthentication(); //jwt check middleware
             app.UseAuthorization();

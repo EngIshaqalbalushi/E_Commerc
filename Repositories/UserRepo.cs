@@ -1,5 +1,5 @@
 ﻿using E_CommerceSystem.Models;
-
+using E_CommerceSystem.DTOs;
 namespace E_CommerceSystem.Repositories
 {
     public class UserRepo : IUserRepo
@@ -8,6 +8,18 @@ namespace E_CommerceSystem.Repositories
         public UserRepo(ApplicationDbContext context)
         {
             _context = context;
+        }
+
+
+        public User? GetByEmail(string email)
+{
+    return _context.Users.FirstOrDefault(u => u.Email == email);
+}
+
+
+        public User? GetByRefreshToken(string refreshToken)
+        {
+            return _context.Users.FirstOrDefault(u => u.RefreshToken == refreshToken);
         }
 
         //Get All users
@@ -40,8 +52,6 @@ namespace E_CommerceSystem.Repositories
         {
             try
             {
-                //Hash the password before saving
-                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password); 
                 _context.Users.Add(user);
                 _context.SaveChanges();
             }
@@ -51,17 +61,28 @@ namespace E_CommerceSystem.Repositories
             }
         }
 
+
         //Update User 
         public void UpdateUser(User user)
         {
             try
             {
-                // Only hash the password if it is updated
-                if (!string.IsNullOrEmpty(user.Password))
+                var existingUser = _context.Users.FirstOrDefault(u => u.UID == user.UID);
+                if (existingUser == null)
+                    throw new KeyNotFoundException($"User with ID {user.UID} not found.");
+
+                existingUser.UName = user.UName;
+                existingUser.Email = user.Email;
+                existingUser.Phone = user.Phone;
+                existingUser.Role = user.Role;
+
+                // Update password only if changed
+                if (!string.IsNullOrEmpty(user.PasswordHash))
                 {
-                    user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                    existingUser.PasswordHash = user.PasswordHash;
                 }
-                _context.Users.Update(user);
+
+                _context.Users.Update(existingUser);
                 _context.SaveChanges();
             }
             catch (Exception ex)
@@ -69,6 +90,7 @@ namespace E_CommerceSystem.Repositories
                 throw new InvalidOperationException($"Database error: {ex.Message}");
             }
         }
+
 
         //Delete User
         public void DeleteUser(int uid)
@@ -89,25 +111,25 @@ namespace E_CommerceSystem.Repositories
         }
 
         //Get user by email and passward
-        public User GetUSer(string email, string password)
+        public User? GetUSer(string email, string password)
         {
             try
             {
-                
-                var user = _context.Users.Where(u => u.Email == email).FirstOrDefault();
+                var user = _context.Users.FirstOrDefault(u => u.Email == email);
 
-                // Compare provided password with the hashed password
-                if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
+                // Compare provided password with the hashed password in DB
+                if (user != null && BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 {
                     return user;
                 }
 
-                return null;  //// Invalid credentials
+                return null;  // Invalid credentials
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Database error: {ex.Message}");
             }
         }
+
     }
 }

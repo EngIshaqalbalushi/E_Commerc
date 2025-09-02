@@ -11,12 +11,13 @@ namespace E_CommerceSystem.Services
         private readonly IOrderProductsService _orderProductsService;
         private readonly IUserRepo _userRepo;
         private readonly IEmailService _emailService;
+
         public OrderService(IOrderRepo orderRepo, IProductService productService, IOrderProductsService orderProductsService, IEmailService emailService)
         {
             _orderRepo = orderRepo;
             _productService = productService;
             _orderProductsService = orderProductsService;
-            
+
             _emailService = emailService;
         }
 
@@ -77,50 +78,50 @@ namespace E_CommerceSystem.Services
 
         // ✅ Place order
         public void PlaceOrder(List<OrderItemDTO> items, int uid)
-{
-    decimal totalOrderPrice = 0;
-
-    // Validate stock first
-    foreach (var item in items)
-    {
-        var product = _productService.GetProductByName(item.ProductName);
-        if (product == null)
-            throw new Exception($"{item.ProductName} not found.");
-        if (product.Stock < item.Quantity)
-            throw new Exception($"{item.ProductName} is out of stock.");
-    }
-
-    // Create order
-    var order = new Order 
-    { 
-        UID = uid, 
-        OrderDate = DateTime.Now, 
-        TotalAmount = 0, 
-        Status = OrderStatus.Pending // 👈 set initial status
-    };
-
-    _orderRepo.AddOrder(order);
-
-    foreach (var item in items)
-    {
-        var product = _productService.GetProductByName(item.ProductName);
-        var totalPrice = item.Quantity * product.Price;
-
-        product.Stock -= item.Quantity;
-        totalOrderPrice += totalPrice;
-
-        var orderProducts = new OrderProducts
         {
-            OID = order.OID,
-            PID = product.PID,
-            Quantity = item.Quantity
-        };
-        _orderProductsService.AddOrderProducts(orderProducts);
-        _productService.UpdateProduct(product);
-    }
+            decimal totalOrderPrice = 0;
 
-    order.TotalAmount = totalOrderPrice;
-    _orderRepo.UpdateOrder(order);
+            // Validate stock first
+            foreach (var item in items)
+            {
+                var product = _productService.GetProductByName(item.ProductName);
+                if (product == null)
+                    throw new Exception($"{item.ProductName} not found.");
+                if (product.Stock < item.Quantity)
+                    throw new Exception($"{item.ProductName} is out of stock.");
+            }
+
+            // Create order
+            var order = new Order
+            {
+                UID = uid,
+                OrderDate = DateTime.Now,
+                TotalAmount = 0,
+                Status = OrderStatus.Pending // 👈 set initial status
+            };
+
+            _orderRepo.AddOrder(order);
+
+            foreach (var item in items)
+            {
+                var product = _productService.GetProductByName(item.ProductName);
+                var totalPrice = item.Quantity * product.Price;
+
+                product.Stock -= item.Quantity;
+                totalOrderPrice += totalPrice;
+
+                var orderProducts = new OrderProducts
+                {
+                    OID = order.OID,
+                    PID = product.PID,
+                    Quantity = item.Quantity
+                };
+                _orderProductsService.AddOrderProducts(orderProducts);
+                _productService.UpdateProduct(product);
+            }
+
+            order.TotalAmount = totalOrderPrice;
+            _orderRepo.UpdateOrder(order);
 
             // ✅ Send email confirmation
             // Send email confirmation
@@ -224,5 +225,12 @@ namespace E_CommerceSystem.Services
 
             _orderRepo.DeleteOrder(oid);
         }
+
+        public Order? GetOrderEntity(int orderId)
+        {
+            return _orderRepo.GetOrderById(orderId);
+        }
+
+
     }
 }

@@ -36,5 +36,8 @@ namespace E_CommerceSystem.Models
 
         // Navigation to OrderProducts
         public virtual ICollection<OrderProducts> OrderProducts { get; set; }
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using E_CommerceSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace E_CommerceSystem.Repositories
 {
@@ -72,11 +73,16 @@ namespace E_CommerceSystem.Repositories
                 _context.Orders.Update(order);
                 _context.SaveChanges();
             }
-            catch (Exception ex)
+            catch (DbUpdateConcurrencyException)
             {
-                throw new InvalidOperationException($"Database error (UpdateOrder): {ex.Message}");
+                throw new InvalidOperationException("This product was updated by another user. Please reload and try again.");
             }
         }
+
+
+
+
+
 
         public IEnumerable<Order> GetOrderByUserId(int uid)
         {

@@ -50,42 +50,44 @@ namespace E_CommerceSystem.Services
         }
         public void AddReview(int uid, int pid, ReviewDTO reviewDTO)
         {
-            // Get all orders for the user
+            // ✅ Check if the user has purchased this product
             var orders = _orderService.GetOrderByUserId(uid);
+            var hasPurchased = false;
+
             foreach (var order in orders)
             {
-                // Check if the product exists in any of the user's orders
                 var products = _orderProductsService.GetOrdersByOrderId(order.OID);
-                foreach (var product in products)
+                if (products.Any(p => p.PID == pid))
                 {
-                    if (product != null && product.PID == pid)
-                    {
-                        // Check if the user has already added a review for this product
-                        var existingReview = GetReviewsByProductIdAndUserId(pid,uid);
-                        
-                        if (existingReview != null)
-                            throw new InvalidOperationException($"You have already reviewed this product.");
-
-                        //add review
-                        var review = new Review
-                        {
-                            PID = pid,
-                            UID = uid,
-                            Comment = reviewDTO.Comment,
-                            Rating = reviewDTO.Rating,
-                            ReviewDate = DateTime.Now
-                        };
-                        _reviewRepo.AddReview(review);
-
-                        // Recalculate and update the product's overall rating
-                        RecalculateProductRating(pid);
-                    }
-                    //else
-                    //    throw new KeyNotFoundException($"You have not ordered this product");
-
+                    hasPurchased = true;
+                    break;
                 }
             }
+
+            if (!hasPurchased)
+                throw new InvalidOperationException("You cannot review a product you have not purchased.");
+
+            // ✅ Check if review already exists
+            var existingReview = GetReviewsByProductIdAndUserId(pid, uid);
+            if (existingReview != null)
+                throw new InvalidOperationException("You have already reviewed this product.");
+
+            // ✅ Add new review
+            var review = new Review
+            {
+                PID = pid,
+                UID = uid,
+                Comment = reviewDTO.Comment,
+                Rating = reviewDTO.Rating,
+                ReviewDate = DateTime.UtcNow
+            };
+
+            _reviewRepo.AddReview(review);
+
+            // ✅ Recalculate and update product rating
+            RecalculateProductRating(pid);
         }
+
         public void UpdateReview(int rid, ReviewDTO reviewDTO)
         {
             var review = GetReviewById(rid);

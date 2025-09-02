@@ -12,7 +12,8 @@ namespace E_CommerceSystem.Services
 
         void UpdateOrderStatus(int orderId, int userId, OrderStatus status);
 
-        
+        Order? GetOrderEntity(int orderId);
+
 
 
 
@@ -22,6 +23,7 @@ namespace E_CommerceSystem.Services
         void PlaceOrder(List<OrderItemDTO> items, int uid);
 
         void CancelOrder(int orderId, int userId);
+
 
     }
 }

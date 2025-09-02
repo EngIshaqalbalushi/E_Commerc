@@ -46,6 +46,33 @@ namespace E_CommerceSystem
                 .HasMany(o => o.OrderProducts)
                 .WithOne(op => op.Order)
                 .HasForeignKey(op => op.OID);
+            modelBuilder.Entity<Review>()
+    .HasIndex(r => new { r.UID, r.PID })
+    .IsUnique(); // ✅ only one review per user per product
+
+            modelBuilder.Entity<Product>()
+    .Property(p => p.RowVersion)
+    .IsRowVersion();
+
+            modelBuilder.Entity<Order>()
+                .Property(o => o.RowVersion)
+                .IsRowVersion();
+
+
+         
+
+
+            modelBuilder.Entity<Review>()
+       .HasOne(r => r.Product)
+       .WithMany(p => p.Reviews)
+       .HasForeignKey(r => r.PID)
+       .OnDelete(DeleteBehavior.Restrict);  // ✅ prevent cascade
+
+            modelBuilder.Entity<Review>()
+                .HasOne(r => r.User)
+                .WithMany(u => u.Reviews)
+                .HasForeignKey(r => r.UID)
+                .OnDelete(DeleteBehavior.Restrict);  // ✅ pr
 
         }
 
