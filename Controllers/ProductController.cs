@@ -1,148 +1,126 @@
 ﻿using E_CommerceSystem.Models;
+using E_CommerceSystem.Models.DTOs;
 using E_CommerceSystem.Services;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace E_CommerceSystem.Controllers
 {
-
     [Authorize]
     [ApiController]
-    [Route("api/[Controller]")]
+    [Route("api/[controller]")]
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
-        private readonly IConfiguration _configuration;
+        private readonly IMapper _mapper;
 
-        public ProductController(IProductService productService, IConfiguration configuration)
+        public ProductController(IProductService productService, IMapper mapper)
         {
             _productService = productService;
-            _configuration = configuration;
+            _mapper = mapper;
         }
 
+        // ✅ Only admins can add products
         [HttpPost("AddProduct")]
-        public IActionResult AddNewProduct(ProductDTO productInput)
+        public IActionResult AddNewProduct(ProductDTO productDto)
         {
             try
             {
-                // Retrieve the Authorization header from the request
                 var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-
-                // Decode the token to check user role
                 var userRole = GetUserRoleFromToken(token);
 
-                // Only allow Admin users to add products
                 if (userRole != "admin")
                 {
                     return BadRequest("You are not authorized to perform this action.");
                 }
 
-                // Check if input data is null
-                if (productInput == null)
+                if (productDto == null)
                 {
                     return BadRequest("Product data is required.");
                 }
 
-                // Create a new product
-                var product = new Product
-                {
-                    ProductName = productInput.ProductName,
-                    Price = productInput.Price,
-                    Description = productInput.Description,
-                    Stock = productInput.Stock,
-                    OverallRating = 0
-                };
+                var product = _mapper.Map<Product>(productDto);
+                product.OverallRating = 0; // default rating
 
-                // Add the new product to the database/service layer
                 _productService.AddProduct(product);
 
-                return Ok(product);
+                return Ok(_mapper.Map<ProductDTO>(product));
             }
             catch (Exception ex)
             {
-                // Return a generic error response
-                return StatusCode(500, $"An error occurred while adding the product: {ex.Message}");
+                return StatusCode(500, $"An error occurred while adding the product. {ex.Message}");
             }
         }
 
+        // ✅ Only admins can update products
         [HttpPut("UpdateProduct/{productId}")]
-        public IActionResult UpdateProduct(int productId, ProductDTO productInput)
+        public IActionResult UpdateProduct(int productId, ProductDTO productDto)
         {
             try
             {
-                // Retrieve the Authorization header from the request
                 var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-
-                // Decode the token to check user role
                 var userRole = GetUserRoleFromToken(token);
 
-                // Only allow Admin users to add products
                 if (userRole != "admin")
                 {
                     return BadRequest("You are not authorized to perform this action.");
                 }
 
-                if (productInput == null)
+                if (productDto == null)
+                {
                     return BadRequest("Product data is required.");
+                }
 
                 var product = _productService.GetProductById(productId);
-                
-                product.ProductName = productInput.ProductName;
-                product.Price = productInput.Price;
-                product.Description = productInput.Description;
-                product.Stock = productInput.Stock;
-                 
+                if (product == null) return NotFound("Product not found.");
+
+                // Map updated values from DTO
+                _mapper.Map(productDto, product);
+
                 _productService.UpdateProduct(product);
 
-                return Ok(product);
+                return Ok(_mapper.Map<ProductDTO>(product));
             }
             catch (Exception ex)
             {
-                // Return a generic error response
-                return StatusCode(500, $"An error occurred while updte product. {(ex.Message)}");
+                return StatusCode(500, $"An error occurred while updating the product. {ex.Message}");
             }
         }
 
-       
+        // ✅ Public - get paginated & filtered products
         [AllowAnonymous]
         [HttpGet("GetAllProducts")]
         public IActionResult GetAllProducts(
-        [FromQuery] string? name,
-        [FromQuery] decimal? minPrice,
-        [FromQuery] decimal? maxPrice,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 10)
+            [FromQuery] string? name,
+            [FromQuery] decimal? minPrice,
+            [FromQuery] decimal? maxPrice,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
             try
             {
-                // Validate pagination parameters
                 if (pageNumber < 1 || pageSize < 1)
                 {
                     return BadRequest("PageNumber and PageSize must be greater than 0.");
                 }
 
-                // Call the service to get the paged and filtered products
                 var products = _productService.GetAllProducts(pageNumber, pageSize, name, minPrice, maxPrice);
-
                 if (products == null || !products.Any())
                 {
                     return NotFound("No products found matching the given criteria.");
                 }
 
-                return Ok(products);
+                return Ok(_mapper.Map<IEnumerable<ProductDTO>>(products));
             }
             catch (Exception ex)
             {
-                // Return a generic error response
                 return StatusCode(500, $"An error occurred while retrieving products. {ex.Message}");
             }
         }
 
+        // ✅ Public - get product by ID
         [AllowAnonymous]
         [HttpGet("GetProductByID/{ProductId}")]
         public IActionResult GetProductById(int ProductId)
@@ -150,16 +128,13 @@ namespace E_CommerceSystem.Controllers
             try
             {
                 var product = _productService.GetProductById(ProductId);
-                if (product == null)
-                    return NotFound("No product found.");
+                if (product == null) return NotFound("No product found.");
 
-                return Ok(product);
+                return Ok(_mapper.Map<ProductDTO>(product));
             }
             catch (Exception ex)
             {
-                // Return a generic error response
-                return StatusCode(500, $"An error occurred while retrieving product. {(ex.Message)}");
-
+                return StatusCode(500, $"An error occurred while retrieving product. {ex.Message}");
             }
         }
         private string? GetUserRoleFromToken(string token)

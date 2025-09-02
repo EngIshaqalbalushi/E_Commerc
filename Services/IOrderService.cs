@@ -5,7 +5,7 @@ namespace E_CommerceSystem.Services
     public interface IOrderService
     {
         List<OrderProducts> GetAllOrders(int uid);
-        IEnumerable<OrdersOutputOTD> GetOrderById(int oid, int uid);
+        IEnumerable<OrdersOutputDTO> GetOrderById(int oid, int uid);
         IEnumerable<Order> GetOrderByUserId(int uid);
         void DeleteOrder(int oid);
 

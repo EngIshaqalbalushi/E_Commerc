@@ -1,6 +1,6 @@
 ﻿namespace E_CommerceSystem.Models
 {
-    public class OrdersOutputOTD
+    public class OrdersOutputDTO
     {
         public DateTime OrderDate { get; set; }
 

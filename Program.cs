@@ -1,4 +1,5 @@
 
+using E_CommerceSystem.Mappings;
 using E_CommerceSystem.Repositories;
 using E_CommerceSystem.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -32,6 +33,14 @@ namespace E_CommerceSystem
 
             builder.Services.AddScoped<IReviewRepo, ReviewRepo>();
             builder.Services.AddScoped<IReviewService, ReviewService>();
+
+            builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+
+            builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+            builder.Services.AddScoped<ISupplierService, SupplierService>();
+            builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                  options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));

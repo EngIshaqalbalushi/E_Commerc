@@ -13,6 +13,13 @@ namespace E_CommerceSystem.Models
 
         public string Description { get; set; }
 
+        public int CID { get; set; }
+        public Category Category { get; set; }
+
+        public int SID { get; set; }
+        public Supplier Supplier { get; set; }
+
+
         [Required]
         [Range(0, int.MaxValue)]
         public decimal Price { get; set; }

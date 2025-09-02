@@ -1,5 +1,7 @@
 ﻿using E_CommerceSystem.Models;
+using E_CommerceSystem.Models.DTOs;
 using E_CommerceSystem.Services;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -12,48 +14,43 @@ namespace E_CommerceSystem.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[Controller]")]
-    public class UserController: ControllerBase
+    public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
+        private readonly IMapper _mapper;
 
-        public UserController(IUserService userService, IConfiguration configuration)
+        public UserController(IUserService userService, IConfiguration configuration, IMapper mapper)
         {
             _userService = userService;
             _configuration = configuration;
+            _mapper = mapper;
         }
 
+        // ✅ Register new user
         [AllowAnonymous]
         [HttpPost("Register")]
-        public IActionResult Register(UserDTO InputUser)
+        public IActionResult Register(UserDTO inputUser)
         {
             try
             {
-                if(InputUser == null)
-                    return BadRequest("User data is required");
+                if (inputUser == null)
+                    return BadRequest("User data is required.");
 
-                var user = new User
-                {
-                    UName = InputUser.UName,
-                    Email = InputUser.Email,
-                    Password = InputUser.Password,
-                    Role = InputUser.Role,
-                    Phone = InputUser.Phone,
-                    CreatedAt = DateTime.Now
-                };
+                var user = _mapper.Map<User>(inputUser);
+                user.CreatedAt = DateTime.Now;
 
                 _userService.AddUser(user);
 
-                return Ok(user);
+                return Ok(_mapper.Map<UserDTO>(user));
             }
             catch (Exception ex)
             {
-                // Return a generic error response
-                return StatusCode(500, $"An error occurred while adding the user. {ex.Message} ");
+                return StatusCode(500, $"An error occurred while adding the user. {ex.Message}");
             }
         }
 
-
+        // ✅ Login user → return JWT token
         [AllowAnonymous]
         [HttpGet("Login")]
         public IActionResult Login(string email, string password)
@@ -61,35 +58,36 @@ namespace E_CommerceSystem.Controllers
             try
             {
                 var user = _userService.GetUSer(email, password);
-                string token = GenerateJwtToken(user.UID.ToString(), user.UName, user.Role);
-                return Ok(token);
+                if (user == null) return Unauthorized("Invalid email or password.");
 
+                string token = GenerateJwtToken(user.UID.ToString(), user.UName, user.Role);
+                return Ok(new { Token = token });
             }
             catch (Exception ex)
             {
-                // Return a generic error response
-                return StatusCode(500, $"An error occurred while login. {(ex.Message)}");
+                return StatusCode(500, $"An error occurred while login. {ex.Message}");
             }
-
         }
 
-
+        // ✅ Get user by ID (returns DTO, not entity)
         [HttpGet("GetUserById/{UserID}")]
         public IActionResult GetUserById(int UserID)
         {
             try
             {
                 var user = _userService.GetUserById(UserID);
-                return Ok(user);
-   
+                if (user == null) return NotFound();
+
+                var userDto = _mapper.Map<UserDTO>(user);
+                return Ok(userDto);
             }
             catch (Exception ex)
             {
-                // Return a generic error response
-                return StatusCode(500, $"An error occurred while retrieving user. {(ex.Message)}");
+                return StatusCode(500, $"An error occurred while retrieving user. {ex.Message}");
             }
         }
 
+        // 🔑 Helper: generate JWT token
         [NonAction]
         public string GenerateJwtToken(string userId, string username, string role)
         {
@@ -100,9 +98,8 @@ namespace E_CommerceSystem.Controllers
             {
                 new Claim(JwtRegisteredClaimNames.Sub, userId),
                 new Claim(JwtRegisteredClaimNames.Name, username),
-                new Claim(JwtRegisteredClaimNames.UniqueName, role),
+                new Claim("role", role), // explicit role claim
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
@@ -116,7 +113,5 @@ namespace E_CommerceSystem.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-
     }
 }

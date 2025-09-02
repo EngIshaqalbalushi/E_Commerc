@@ -43,11 +43,11 @@ namespace E_CommerceSystem.Services
         }
 
         //get order by order id for the login user
-        public IEnumerable<OrdersOutputOTD> GetOrderById(int oid, int uid)
+        public IEnumerable<OrdersOutputDTO> GetOrderById(int oid, int uid)
         {
             //list of items in the order 
-            List<OrdersOutputOTD> items = new List<OrdersOutputOTD>();
-            OrdersOutputOTD ordersOutputOTD = null;
+            List<OrdersOutputDTO> items = new List<OrdersOutputDTO>();
+            OrdersOutputDTO ordersOutputOTD = null;
 
             
             List<OrderProducts> products = null;
@@ -68,7 +68,7 @@ namespace E_CommerceSystem.Services
                 {
                     product = _productService.GetProductById(p.PID);
                     productName = product.ProductName;
-                    ordersOutputOTD = new OrdersOutputOTD
+                    ordersOutputOTD = new OrdersOutputDTO
                     {
                         ProductName = productName,
                         Quantity = p.Quantity,
