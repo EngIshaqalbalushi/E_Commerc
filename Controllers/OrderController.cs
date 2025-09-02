@@ -1,14 +1,14 @@
-﻿using E_CommerceSystem.Models;
+﻿using AutoMapper;
+using E_CommerceSystem.Models;
 using E_CommerceSystem.Models.DTOs;
 using E_CommerceSystem.Services;
-using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace E_CommerceSystem.Controllers
 {
-    [Authorize]
+    [Authorize] // 🔒 requires valid JWT
     [ApiController]
     [Route("api/[controller]")]
     public class OrderController : ControllerBase
@@ -22,22 +22,16 @@ namespace E_CommerceSystem.Controllers
             _mapper = mapper;
         }
 
-        // POST: api/order/PlaceOrder
+        // ✅ Place Order
         [HttpPost("PlaceOrder")]
         public IActionResult PlaceOrder([FromBody] List<OrderItemDTO> items)
         {
             try
             {
                 if (items == null || !items.Any())
-                {
                     return BadRequest("Order items cannot be empty.");
-                }
 
-                // Extract user ID from JWT
-                var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-                var userId = GetUserIdFromToken(token);
-                int uid = int.Parse(userId);
-
+                var uid = GetUserIdFromToken();
                 _orderService.PlaceOrder(items, uid);
 
                 return Ok("Order placed successfully.");
@@ -48,21 +42,16 @@ namespace E_CommerceSystem.Controllers
             }
         }
 
-        // GET: api/order/GetAllOrders
+        // ✅ Get All Orders for logged-in user
         [HttpGet("GetAllOrders")]
         public IActionResult GetAllOrders()
         {
             try
             {
-                var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-                var userId = GetUserIdFromToken(token);
-                int uid = int.Parse(userId);
-
+                var uid = GetUserIdFromToken();
                 var orders = _orderService.GetAllOrders(uid);
 
-                // Map to DTOs before returning
                 var ordersDto = _mapper.Map<IEnumerable<OrdersOutputDTO>>(orders);
-
                 return Ok(ordersDto);
             }
             catch (Exception ex)
@@ -71,20 +60,19 @@ namespace E_CommerceSystem.Controllers
             }
         }
 
-        // GET: api/order/GetOrderById/{OrderId}
-        [HttpGet("GetOrderById/{OrderId}")]
-        public IActionResult GetOrderById(int OrderId)
+        // ✅ Get Order by ID (must belong to logged-in user)
+        [HttpGet("GetOrderById/{orderId}")]
+        public IActionResult GetOrderById(int orderId)
         {
             try
             {
-                var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-                var userId = GetUserIdFromToken(token);
-                int uid = int.Parse(userId);
+                var uid = GetUserIdFromToken();
+                var order = _orderService.GetOrderById(orderId, uid);
 
-                var order = _orderService.GetOrderById(OrderId, uid);
-                if (order == null) return NotFound();
+                if (order == null)
+                    return NotFound($"No order found with ID {orderId} for this user.");
 
-                var orderDto = _mapper.Map<OrdersOutputDTO>(order);
+                var orderDto = _mapper.Map<IEnumerable<OrdersOutputDTO>>(order);
                 return Ok(orderDto);
             }
             catch (Exception ex)
@@ -93,17 +81,70 @@ namespace E_CommerceSystem.Controllers
             }
         }
 
-        // Helper: decode JWT token to extract user ID
-        private string? GetUserIdFromToken(string token)
+        // ✅ Order Summaries
+        [HttpGet("GetOrderSummaries")]
+        public IActionResult GetOrderSummaries()
         {
+            try
+            {
+                var uid = GetUserIdFromToken();
+                var summaries = _orderService.GetOrderSummaries(uid);
+                return Ok(summaries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while retrieving order summaries. {ex.Message}");
+            }
+        }
+
+        [HttpPut("CancelOrder/{orderId}")]
+        public IActionResult CancelOrder(int orderId)
+        {
+            try
+            {
+                var userId = GetUserIdFromToken(); // no parse needed
+
+                _orderService.CancelOrder(orderId, userId);
+
+                return Ok($"Order {orderId} has been cancelled and stock restored.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpPut("UpdateStatus/{orderId}")]
+        public IActionResult UpdateOrderStatus(int orderId, [FromQuery] OrderStatus status)
+        {
+            try
+            {
+                var userId = GetUserIdFromToken();
+                _orderService.UpdateOrderStatus(orderId, userId, status);
+
+                return Ok($"Order {orderId} status updated to {status}");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+
+
+        // 🔑 Extract UserId from JWT
+        private int GetUserIdFromToken()
+        {
+            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
             var handler = new JwtSecurityTokenHandler();
 
             if (handler.CanReadToken(token))
             {
                 var jwtToken = handler.ReadJwtToken(token);
-                var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub");
+                var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == "nameid");
 
-                return subClaim?.Value;
+                if (subClaim != null && int.TryParse(subClaim.Value, out int uid))
+                    return uid;
             }
 
             throw new UnauthorizedAccessException("Invalid or unreadable token.");

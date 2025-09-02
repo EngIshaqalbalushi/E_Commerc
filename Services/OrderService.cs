@@ -1,10 +1,6 @@
 ﻿using E_CommerceSystem.Models;
 using E_CommerceSystem.Repositories;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Security.Cryptography;
+
 
 namespace E_CommerceSystem.Services
 {
@@ -13,22 +9,144 @@ namespace E_CommerceSystem.Services
         private readonly IOrderRepo _orderRepo;
         private readonly IProductService _productService;
         private readonly IOrderProductsService _orderProductsService;
-
-        public OrderService(IOrderRepo orderRepo, IProductService productService, IOrderProductsService orderProductsService)
+        private readonly IUserRepo _userRepo;
+        private readonly IEmailService _emailService;
+        public OrderService(IOrderRepo orderRepo, IProductService productService, IOrderProductsService orderProductsService, IEmailService emailService)
         {
             _orderRepo = orderRepo;
             _productService = productService;
             _orderProductsService = orderProductsService;
+            
+            _emailService = emailService;
         }
 
-        //get all orders for login user
-        public List <OrderProducts> GetAllOrders(int uid)
+        // ✅ Get all orders for a user
+        public IEnumerable<Order> GetOrderByUserId(int uid)
         {
             var orders = _orderRepo.GetOrderByUserId(uid);
             if (orders == null || !orders.Any())
+                throw new KeyNotFoundException($"No orders found for user ID {uid}.");
+            return orders;
+        }
+
+        // ✅ Get order details (products inside a specific order)
+        public IEnumerable<OrdersOutputDTO> GetOrderById(int oid, int uid)
+        {
+            var items = new List<OrdersOutputDTO>();
+            var order = _orderRepo.GetOrderById(oid);
+
+            if (order == null || order.UID != uid)
+                throw new InvalidOperationException($"No order found with ID {oid} for user {uid}.");
+
+            var products = _orderProductsService.GetOrdersByOrderId(oid);
+            foreach (var p in products)
+            {
+                var product = _productService.GetProductById(p.PID);
+                items.Add(new OrdersOutputDTO
+                {
+                    ProductName = product.ProductName,
+                    Quantity = p.Quantity,
+                    OrderDate = order.OrderDate,
+                    TotalAmount = p.Quantity * product.Price,
+                });
+            }
+
+            return items;
+        }
+
+        // ✅ Order Summary DTOs (new feature)
+        public IEnumerable<OrderSummaryDTO> GetOrderSummaries(int uid)
+        {
+            var orders = _orderRepo.GetOrderByUserId(uid);
+
+            return orders.Select(order => new OrderSummaryDTO
+            {
+                OrderId = order.OID,
+                UserName = order.User?.UName,
+                OrderDate = order.OrderDate,
+                Status = order.Status.ToString(),
+                TotalAmount = order.TotalAmount,
+                Products = order.OrderProducts.Select(op => new OrderProductDTO
+                {
+                    ProductName = op.Product.ProductName,
+                    Quantity = op.Quantity,
+                    Price = op.Product.Price
+                }).ToList()
+            });
+        }
+
+        // ✅ Place order
+        public void PlaceOrder(List<OrderItemDTO> items, int uid)
+{
+    decimal totalOrderPrice = 0;
+
+    // Validate stock first
+    foreach (var item in items)
+    {
+        var product = _productService.GetProductByName(item.ProductName);
+        if (product == null)
+            throw new Exception($"{item.ProductName} not found.");
+        if (product.Stock < item.Quantity)
+            throw new Exception($"{item.ProductName} is out of stock.");
+    }
+
+    // Create order
+    var order = new Order 
+    { 
+        UID = uid, 
+        OrderDate = DateTime.Now, 
+        TotalAmount = 0, 
+        Status = OrderStatus.Pending // 👈 set initial status
+    };
+
+    _orderRepo.AddOrder(order);
+
+    foreach (var item in items)
+    {
+        var product = _productService.GetProductByName(item.ProductName);
+        var totalPrice = item.Quantity * product.Price;
+
+        product.Stock -= item.Quantity;
+        totalOrderPrice += totalPrice;
+
+        var orderProducts = new OrderProducts
+        {
+            OID = order.OID,
+            PID = product.PID,
+            Quantity = item.Quantity
+        };
+        _orderProductsService.AddOrderProducts(orderProducts);
+        _productService.UpdateProduct(product);
+    }
+
+    order.TotalAmount = totalOrderPrice;
+    _orderRepo.UpdateOrder(order);
+
+            // ✅ Send email confirmation
+            // Send email confirmation
+            var user = _userRepo.GetUserById(uid);
+            if (user != null)
+            {
+                _emailService.SendEmail(
+                    user.Email,
+                    "Order Confirmation",
+                    $"Hello {user.UName},<br/>" +
+                    $"Your order #{order.OID} has been placed successfully.<br/>" +
+                    $"Total Amount: {order.TotalAmount:C}"
+                );
+            }
+
+
+        }
+
+
+        public List<OrderProducts> GetAllOrders(int uid)
+        {
+            var orders = _orderRepo.GetOrderByUserId(uid);
+
+            if (orders == null || !orders.Any())
                 throw new InvalidOperationException($"No orders found for user ID {uid}.");
 
-            // Collect all OrderProducts for all orders
             var allOrderProducts = new List<OrderProducts>();
 
             foreach (var order in orders)
@@ -39,130 +157,72 @@ namespace E_CommerceSystem.Services
             }
 
             return allOrderProducts;
-
         }
 
-        //get order by order id for the login user
-        public IEnumerable<OrdersOutputDTO> GetOrderById(int oid, int uid)
+        public void CancelOrder(int orderId, int userId)
         {
-            //list of items in the order 
-            List<OrdersOutputDTO> items = new List<OrdersOutputDTO>();
-            OrdersOutputDTO ordersOutputOTD = null;
+            var order = _orderRepo.GetOrderById(orderId);
+            if (order == null || order.UID != userId)
+                throw new Exception("Order not found or unauthorized.");
 
-            
-            List<OrderProducts> products = null;
-            Product product = null;
-            string productName = string.Empty;
+            if (order.Status == OrderStatus.Cancelled)
+                throw new Exception("Order already cancelled.");
 
-            //get order 
-            var order = _orderRepo.GetOrderById(oid);
+            // Update status
+            order.Status = OrderStatus.Cancelled;
+            _orderRepo.UpdateOrder(order);
 
-            if (order == null)
-                throw new InvalidOperationException($"No orders found .");
-
-            //execute the products data in existing Product
-            if (order.UID == uid)
+            // Restore stock
+            foreach (var item in order.OrderProducts)
             {
-                products = _orderProductsService.GetOrdersByOrderId(oid);
-                foreach (var p in products)
+                var product = _productService.GetProductById(item.PID);
+                if (product != null)
                 {
-                    product = _productService.GetProductById(p.PID);
-                    productName = product.ProductName;
-                    ordersOutputOTD = new OrdersOutputDTO
-                    {
-                        ProductName = productName,
-                        Quantity = p.Quantity,
-                        OrderDate = order.OrderDate,
-                        TotalAmount = p.Quantity * product.Price,
-                    };
-                    items.Add(ordersOutputOTD);
+                    product.Stock += item.Quantity;
+                    _productService.UpdateProduct(product);
                 }
             }
-   
-            return items;
-     
+
+            // ✅ Send cancellation email
+            var user = _userRepo.GetUserById(userId);
+            if (user != null)
+            {
+                _emailService.SendEmail(
+                    user.Email,
+                    "Order Cancellation",
+                    $"Hello {user.UName},<br/>" +
+                    $"Your order #{order.OID} has been <b>cancelled</b>.<br/>" +
+                    $"If you have questions, please contact support."
+                );
+            }
         }
 
-        public IEnumerable<Order> GetOrderByUserId(int uid)
+
+        public void UpdateOrderStatus(int orderId, int userId, OrderStatus status)
         {
-            var order = _orderRepo.GetOrderByUserId(uid);
-            if (order == null)
-                throw new KeyNotFoundException($"order with user ID {uid} not found.");
+            var order = _orderRepo.GetOrderById(orderId);
 
-            return order;
+            if (order == null || order.UID != userId)
+                throw new Exception("Order not found or unauthorized.");
+
+            order.Status = status;  // ✅ uses enum instead of string
+            _orderRepo.UpdateOrder(order);
         }
+
+
+
+        // ✅ Add, Update, Delete
+        public void AddOrder(Order order) => _orderRepo.AddOrder(order);
+
+        public void UpdateOrder(Order order) => _orderRepo.UpdateOrder(order);
 
         public void DeleteOrder(int oid)
         {
             var order = _orderRepo.GetOrderById(oid);
             if (order == null)
-                throw new KeyNotFoundException($"order with ID {oid} not found.");
+                throw new KeyNotFoundException($"Order with ID {oid} not found.");
 
             _orderRepo.DeleteOrder(oid);
-            throw new Exception($"order with ID {oid} is deleted");
-        }
-        public void AddOrder(Order order)
-        {
-            _orderRepo.AddOrder(order);
-        }
-        public void UpdateOrder(Order order)
-        {
-            _orderRepo.UpdateOrder(order);
-        }
-
-        //Places an order for the given list of items and user ID.
-        public void PlaceOrder( List<OrderItemDTO> items, int uid)
-        {
-            // Temporary variable to hold the currently processed product
-            Product existingProduct = null;
-            
-            decimal TotalPrice, totalOrderPrice = 0; // Variables to hold the total price of each item and the overall order
-
-            OrderProducts orderProducts = null;
-
-            // Validate all items in the order
-            for (int i = 0; i < items.Count; i++)
-            {
-                TotalPrice = 0;
-                existingProduct = _productService.GetProductByName(items[i].ProductName);
-                if (existingProduct == null)
-                    throw new Exception($"{items[i].ProductName} not Found");
-
-                if (existingProduct.Stock < items[i].Quantity)
-                    throw new Exception($"{items[i].ProductName} is out of stock");
-
-            }
-            // Create a new order for the user
-            var order = new Order { UID = uid, OrderDate = DateTime.Now, TotalAmount = 0 };
-            AddOrder(order); // Save the order to the database
-
-            // Process each item in the order
-            foreach (var item in items)
-            {
-                // Retrieve the product by its name
-                existingProduct = _productService.GetProductByName(item.ProductName);
-               
-                // Calculate the total price for the current item
-                TotalPrice = item.Quantity * existingProduct.Price;
-
-                // Deduct the ordered quantity from the product's stock
-                existingProduct.Stock -= item.Quantity;
-
-                // Update the overall total order price
-                totalOrderPrice += TotalPrice;
-
-                // Create a relationship record between the order and product
-                orderProducts = new OrderProducts {OID = order.OID, PID = existingProduct.PID, Quantity = item.Quantity  };
-                _orderProductsService.AddOrderProducts(orderProducts);
-
-                // Update the product's stock in the database
-                _productService.UpdateProduct(existingProduct);
-            }
-
-            // Update the total amount of the order
-            order.TotalAmount = totalOrderPrice;
-            UpdateOrder(order);
-
         }
     }
 }

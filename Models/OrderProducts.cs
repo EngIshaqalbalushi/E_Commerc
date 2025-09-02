@@ -8,22 +8,19 @@ namespace E_CommerceSystem.Models
     [PrimaryKey(nameof(OID), nameof(PID))]
     public class OrderProducts
     {
-
-        [Range (0, int.MaxValue)]
+        [Range(0, int.MaxValue)]
         public int Quantity { get; set; }
 
-        
         [ForeignKey("Order")]
-
         public int OID { get; set; }
-        [JsonIgnore]
-        public Order Order { get; set; }
 
-        
+        [JsonIgnore]
+        public virtual Order Order { get; set; }   // ✅ keep this one only
+
         [ForeignKey("Product")]
         public int PID { get; set; }
+
         [JsonIgnore]
-        public Product product { get; set; }
+        public virtual Product Product { get; set; }
     }
 }
-

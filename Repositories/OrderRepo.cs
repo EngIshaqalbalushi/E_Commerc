@@ -1,51 +1,14 @@
 ﻿using E_CommerceSystem.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace E_CommerceSystem.Repositories
 {
     public class OrderRepo : IOrderRepo
     {
-        public ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context;
 
         public OrderRepo(ApplicationDbContext context)
         {
             _context = context;
-        }
-
-        public IEnumerable<Order> GetAllOrders()
-        {
-            try
-            {
-                return _context.Orders.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Database error: {ex.Message}");
-            }
-        }
-
-        public Order GetOrderById(int oid)
-        {
-            try
-            {
-                return _context.Orders.FirstOrDefault(o => o.OID == oid);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Database error: {ex.Message}");
-            }
-        }
-
-        public IEnumerable<Order> GetOrderByUserId(int uid)
-        {
-            try
-            {
-                return _context.Orders.Where(o => o.UID == uid).ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Database error: {ex.Message}");
-            }
         }
 
         public void AddOrder(Order order)
@@ -57,7 +20,7 @@ namespace E_CommerceSystem.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Database error: {ex.Message}");
+                throw new InvalidOperationException($"Database error (AddOrder): {ex.Message}");
             }
         }
 
@@ -65,7 +28,7 @@ namespace E_CommerceSystem.Repositories
         {
             try
             {
-                var order = GetOrderById(oid);
+                var order = _context.Orders.FirstOrDefault(o => o.OID == oid);
                 if (order != null)
                 {
                     _context.Orders.Remove(order);
@@ -74,7 +37,31 @@ namespace E_CommerceSystem.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Database error: {ex.Message}");
+                throw new InvalidOperationException($"Database error (DeleteOrder): {ex.Message}");
+            }
+        }
+
+        public IEnumerable<Order> GetAllOrders()
+        {
+            try
+            {
+                return _context.Orders.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Database error (GetAllOrders): {ex.Message}");
+            }
+        }
+
+        public Order GetOrderById(int oid)
+        {
+            try
+            {
+                return _context.Orders.FirstOrDefault(o => o.OID == oid);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Database error (GetOrderById): {ex.Message}");
             }
         }
 
@@ -87,9 +74,20 @@ namespace E_CommerceSystem.Repositories
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Database error: {ex.Message}");
+                throw new InvalidOperationException($"Database error (UpdateOrder): {ex.Message}");
             }
         }
 
+        public IEnumerable<Order> GetOrderByUserId(int uid)
+        {
+            try
+            {
+                return _context.Orders.Where(o => o.UID == uid).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Database error (GetOrderByUserId): {ex.Message}");
+            }
+        }
     }
 }

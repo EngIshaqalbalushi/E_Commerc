@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace E_CommerceSystem
 {
@@ -39,11 +41,26 @@ namespace E_CommerceSystem
 
             builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
             builder.Services.AddScoped<ISupplierService, SupplierService>();
+            builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            //  builder.Services.AddSingleton<IEmailService>(sp =>
+            //new EmailService(
+            //    "smtp.gmail.com", // Gmail SMTP server
+            //          587,              // Port
+            //       "yourgmail@gmail.com",   // replace with your Gmail
+            //             "your-app-password"      // generated App Password
+            //          ));
+
+
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                  options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+
+
 
             // Add JWT Authentication
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -68,6 +85,13 @@ namespace E_CommerceSystem
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
+
+            builder.Services.AddControllers()
+              .AddJsonOptions(options =>
+                 {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                       });
+
 
             builder.Services.AddSwaggerGen(c =>
             {
@@ -109,6 +133,7 @@ namespace E_CommerceSystem
             app.UseAuthentication(); //jwt check middleware
             app.UseAuthorization();
 
+            app.UseStaticFiles();
 
             app.MapControllers();
 

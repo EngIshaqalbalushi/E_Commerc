@@ -4,6 +4,7 @@ using E_CommerceSystem;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace E_CommerceSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250902121224_Add")]
+    partial class Add
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,9 +56,6 @@ namespace E_CommerceSystem.Migrations
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
@@ -99,11 +99,11 @@ namespace E_CommerceSystem.Migrations
                     b.Property<int>("CID")
                         .HasColumnType("int");
 
+                    b.Property<int>("CategoryCID")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("OverallRating")
@@ -122,11 +122,14 @@ namespace E_CommerceSystem.Migrations
                     b.Property<int>("Stock")
                         .HasColumnType("int");
 
+                    b.Property<int>("SupplierSID")
+                        .HasColumnType("int");
+
                     b.HasKey("PID");
 
-                    b.HasIndex("CID");
+                    b.HasIndex("CategoryCID");
 
-                    b.HasIndex("SID");
+                    b.HasIndex("SupplierSID");
 
                     b.ToTable("Products");
                 });
@@ -230,13 +233,13 @@ namespace E_CommerceSystem.Migrations
 
             modelBuilder.Entity("E_CommerceSystem.Models.Order", b =>
                 {
-                    b.HasOne("E_CommerceSystem.Models.User", "User")
+                    b.HasOne("E_CommerceSystem.Models.User", "user")
                         .WithMany("Orders")
                         .HasForeignKey("UID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("user");
                 });
 
             modelBuilder.Entity("E_CommerceSystem.Models.OrderProducts", b =>
@@ -247,7 +250,7 @@ namespace E_CommerceSystem.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("E_CommerceSystem.Models.Product", "Product")
+                    b.HasOne("E_CommerceSystem.Models.Product", "product")
                         .WithMany("OrderProducts")
                         .HasForeignKey("PID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -255,21 +258,21 @@ namespace E_CommerceSystem.Migrations
 
                     b.Navigation("Order");
 
-                    b.Navigation("Product");
+                    b.Navigation("product");
                 });
 
             modelBuilder.Entity("E_CommerceSystem.Models.Product", b =>
                 {
                     b.HasOne("E_CommerceSystem.Models.Category", "Category")
                         .WithMany("Products")
-                        .HasForeignKey("CID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasForeignKey("CategoryCID")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("E_CommerceSystem.Models.Supplier", "Supplier")
                         .WithMany("Products")
-                        .HasForeignKey("SID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasForeignKey("SupplierSID")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Category");

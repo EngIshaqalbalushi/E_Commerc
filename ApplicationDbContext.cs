@@ -24,7 +24,30 @@ namespace E_CommerceSystem
                         .HasIndex(u => u.Email)
                         .IsUnique();
 
+            modelBuilder.Entity<Product>()
+       .HasOne(p => p.Category)
+       .WithMany(c => c.Products)
+       .HasForeignKey(p => p.CID)
+       .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Product>()
+                .HasOne(p => p.Supplier)
+                .WithMany(s => s.Products)
+                .HasForeignKey(p => p.SID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Order → User (many-to-one)
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.User)
+                .WithMany(u => u.Orders)
+                .HasForeignKey(o => o.UID);
+
+            // Order → OrderProducts (one-to-many)
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.OrderProducts)
+                .WithOne(op => op.Order)
+                .HasForeignKey(op => op.OID);
 
         }
+
     }
 }

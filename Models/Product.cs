@@ -19,19 +19,21 @@ namespace E_CommerceSystem.Models
         public int SID { get; set; }
         public Supplier Supplier { get; set; }
 
-
         [Required]
         [Range(0, int.MaxValue)]
         public decimal Price { get; set; }
 
         [Required]
         [Range(0, int.MaxValue)]
-        public int Stock {  get; set; }
+        public int Stock { get; set; }
 
         public decimal OverallRating { get; set; }
 
+        // ✅ New field for storing image URL/path
+        public string? ImageUrl { get; set; }
+
         [JsonIgnore]
-        public virtual ICollection<OrderProducts> OrderProducts { get;set; }
+        public virtual ICollection<OrderProducts> OrderProducts { get; set; }
 
         [JsonIgnore]
         public virtual ICollection<Review> Reviews { get; set; }

@@ -4,13 +4,24 @@ namespace E_CommerceSystem.Services
 {
     public interface IOrderService
     {
-        List<OrderProducts> GetAllOrders(int uid);
-        IEnumerable<OrdersOutputDTO> GetOrderById(int oid, int uid);
         IEnumerable<Order> GetOrderByUserId(int uid);
-        void DeleteOrder(int oid);
+        IEnumerable<OrdersOutputDTO> GetOrderById(int oid, int uid);
+        IEnumerable<OrderSummaryDTO> GetOrderSummaries(int userId);
+        List<OrderProducts> GetAllOrders(int uid);
+
+
+        void UpdateOrderStatus(int orderId, int userId, OrderStatus status);
+
+        
+
+
 
         void AddOrder(Order order);
         void UpdateOrder(Order order);
-       void PlaceOrder(List<OrderItemDTO> items, int uid);
+        void DeleteOrder(int oid);
+        void PlaceOrder(List<OrderItemDTO> items, int uid);
+
+        void CancelOrder(int orderId, int userId);
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using E_CommerceSystem.Models;
+using System.Collections.Generic;
 
 namespace E_CommerceSystem.Repositories
 {
@@ -9,6 +10,8 @@ namespace E_CommerceSystem.Repositories
         IEnumerable<Order> GetAllOrders();
         Order GetOrderById(int oid);
         void UpdateOrder(Order order);
+
+        // ✅ keep only one version of this
         IEnumerable<Order> GetOrderByUserId(int uid);
     }
 }
