@@ -100,8 +100,51 @@ Admin → API Request → Report Service → Database → Aggregation → API Re
 ---
 
 ## 🙌 Authors
-👨‍💻 **Mohammed Yusuf Alkhusaibi**  
+👨‍💻 **Mohammed Yusuf Alkhusaibi  **  
+👨‍💻 **Ishaq AL baluchi GTR  **  
 Backend Developer | Database Designer | Full Stack Trainee  
+
+
+## API Endpoints
+
+| Module   | API Endpoint                                   | Method | Role                  |
+|----------|-----------------------------------------------|--------|-----------------------|
+| **Order** | POST `/api/Order/PlaceOrder`                  | POST   | Admin                 |
+|          | GET `/api/Order/GetAllOrders`                  | GET    | User                  |
+|          | GET `/api/Order/GetOrderById/{orderId}`        | GET    | User (same order ID)  |
+|          | GET `/api/Order/GetOrderSummaries`             | GET    | User                  |
+|          | PUT `/api/Order/CancelOrder/{orderId}`         | PUT    | Admin, User (own ID)  |
+|          | PUT `/api/Order/UpdateStatus/{orderId}`        | PUT    | Admin                 |
+| **Product** | POST `/api/Product/AddProduct`              | POST   | Admin                 |
+|          | PUT `/api/Product/UpdateProduct/{productId}`   | PUT    | Admin                 |
+|          | GET `/api/Product/GetAllProducts`              | GET    | User                  |
+|          | GET `/api/Product/GetProductByID/{productId}`  | GET    | Admin                 |
+|          | POST `/api/Product/UploadImage/{productId}`    | POST   | Admin                 |
+| **Report** | GET `/api/Report/best-selling-products`      | GET    | Admin                 |
+|          | GET `/api/Report/daily-revenue`                | GET    | Admin                 |
+|          | GET `/api/Report/monthly-revenue`              | GET    | Admin                 |
+|          | GET `/api/Report/top-rated-products`           | GET    | Admin                 |
+|          | GET `/api/Report/most-active-customers`        | GET    | Admin                 |
+| **Review** | POST `/api/Review/AddReview`                 | POST   | User                  |
+|          | GET `/api/Review/GetAllReviews`                | GET    | User                  |
+|          | DELETE `/api/Review/DeleteReview/{ReviewId}`   | DELETE | User                  |
+|          | PUT `/api/Review/UpdateReview/{ReviewId}`      | PUT    | User                  |
+| **Supplier** | GET `/api/Supplier`                        | GET    | Admin                 |
+|          | POST `/api/Supplier`                           | POST   | Admin                 |
+|          | GET `/api/Supplier/{id}`                       | GET    | Admin                 |
+|          | PUT `/api/Supplier/{id}`                       | PUT    | Admin                 |
+|          | DELETE `/api/Supplier/{id}`                    | DELETE | Admin                 |
+| **User** | POST `/api/User/register`                      | POST   | New User              |
+|          | POST `/api/User/refresh-token`                 | POST   | User (token)          |
+|          | POST `/api/User/login`                         | POST   | User (email/password) |
+|          | GET `/api/User/GetUserById/{UserID}`           | GET    | Admin (with ID)       |
+| **Category** | GET `/api/Category`                        | GET    | User                  |
+|          | POST `/api/Category`                           | POST   | Admin                 |
+|          | GET `/api/Category/{id}`                       | GET    | User                  |
+|          | PUT `/api/Category/{id}`                       | PUT    | Admin                 |
+|          | DELETE `/api/Category/{id}`                    | DELETE | Admin                 |
+| **Invoice** | GET `/api/Invoice/{orderId}/pdf`            | GET    | Admin                 |
+
 
 📌 *Part of my portfolio showcasing enterprise-grade backend solutions.*
 
